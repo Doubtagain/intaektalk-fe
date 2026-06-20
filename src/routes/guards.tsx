@@ -23,6 +23,15 @@ export function RequireOnboarded({ children }: { children: ReactNode }) {
   return children
 }
 
+/** 관리자 전용 (RequireAuth/RequireOnboarded 내부에서 사용 — user 는 이미 존재). 비관리자는 메인으로 */
+export function RequireAdmin({ children }: { children: ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+  if (!user?.isAdmin) {
+    return <Navigate to="/" replace />
+  }
+  return children
+}
+
 /** 비로그인 전용 (이미 로그인 시 메인으로) */
 export function PublicOnly({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)

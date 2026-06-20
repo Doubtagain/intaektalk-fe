@@ -1,43 +1,62 @@
 import { apiClient, rawPost, unwrap } from './client'
 import type {
-  AuthResponse,
+  AccessRequest,
   AuthTokens,
   CreateProfileDto,
   CreateRoomDto,
   CreateUploadUrlDto,
+  CreateWhitelistDto,
+  LoginResponse,
   MediaMeta,
   MemberRole,
   Message,
   MessagesPage,
+  MeResponse,
   Page,
   RegisterTokenDto,
   Room,
   SendMessageDto,
   UpdateProfileDto,
   UpdateRoomDto,
+  UpdateWhitelistDto,
   UploadUrlResponse,
   User,
+  Whitelist,
+  WhitelistStatus,
 } from './types'
 
 export const MESSAGES_PAGE_SIZE = 50
 
 // ---------- Auth ----------
 
+/** 백엔드 MeResponse(프로필 중첩) → FE User(평면) 매핑. profile 은 온보딩 전이면 null. */
+function mapMeToUser(me: MeResponse): User {
+  return {
+    id: me.id,
+    kakaoId: me.kakaoId,
+    isOnboarded: me.isOnboarded,
+    isAdmin: me.isAdmin,
+    nickname: me.profile?.nickname ?? '',
+    avatarUrl: me.profile?.avatarUrl ?? null,
+    statusMessage: me.profile?.statusMessage ?? null,
+  }
+}
+
 export const authApi = {
   /**
    * 카카오 인가 코드 → 인택톡 토큰 교환. 코드→카카오토큰 교환은 백엔드가 수행한다.
-   * (백엔드 DTO 가 { code, redirectUri } 로 전환되기 전까지 rawPost 로 호출 — 전환 후 gen:api 재생성하면
-   *  apiClient.POST('/api/v1/auth/kakao', ...) 로 바꿀 수 있다.) 미등록 사용자는 403 NOT_ALLOWED.
+   * 응답 LoginResponse 의 user 는 { id, kakaoId } 뿐이고 isOnboarded 는 최상위다 —
+   * 닉네임/isAdmin 은 로그인 직후 me() 로 보강한다. 미등록 사용자는 403 NOT_ALLOWED.
    */
   loginWithKakao: (code: string, redirectUri: string) =>
-    rawPost<AuthResponse>('/auth/kakao', { code, redirectUri }),
+    rawPost<LoginResponse>('/auth/kakao', { code, redirectUri }),
   refresh: (refreshToken: string) =>
     apiClient.POST('/api/v1/auth/refresh', { body: { refreshToken } }).then(unwrap<AuthTokens>),
   logout: (refreshToken: string) =>
     apiClient.POST('/api/v1/auth/logout', { body: { refreshToken } }).then(unwrap<void>),
-  /** 현재 사용자 + 온보딩 상태 */
+  /** 현재 사용자 + 온보딩 + 관리자 여부 (MeResponse → User 평면 매핑) */
   me: (signal?: AbortSignal) =>
-    apiClient.GET('/api/v1/auth/me', { signal }).then(unwrap<User>),
+    apiClient.GET('/api/v1/auth/me', { signal }).then(unwrap<MeResponse>).then(mapMeToUser),
 }
 
 // ---------- Profile ----------
@@ -178,4 +197,55 @@ export const pushApi = {
     apiClient
       .DELETE('/api/v1/push/tokens/{tokenId}', { params: { path: { tokenId } } })
       .then(unwrap<void>),
+}
+
+// ---------- Admin (화이트리스트 / 가입 대기) ----------
+
+export const adminApi = {
+  whitelist: {
+    /** 화이트리스트 목록 (status 필터 + createdAt 커서) */
+    list: (params: { status?: WhitelistStatus; cursor?: string | null } = {}, signal?: AbortSignal) =>
+      apiClient
+        .GET('/api/v1/admin/whitelist', {
+          params: {
+            query: {
+              limit: 50,
+              ...(params.status ? { status: params.status } : {}),
+              ...(params.cursor ? { cursor: params.cursor } : {}),
+            },
+          },
+          signal,
+        })
+        .then(unwrap<Page<Whitelist>>),
+    create: (body: CreateWhitelistDto) =>
+      apiClient.POST('/api/v1/admin/whitelist', { body }).then(unwrap<Whitelist>),
+    update: (id: string, body: UpdateWhitelistDto) =>
+      apiClient
+        .PATCH('/api/v1/admin/whitelist/{id}', { params: { path: { id } }, body })
+        .then(unwrap<Whitelist>),
+    remove: (id: string) =>
+      apiClient
+        .DELETE('/api/v1/admin/whitelist/{id}', { params: { path: { id } } })
+        .then(unwrap<void>),
+  },
+  accessRequests: {
+    /** 가입 대기(거부된 로그인 시도) 목록 (createdAt 커서) */
+    list: (cursor?: string | null, signal?: AbortSignal) =>
+      apiClient
+        .GET('/api/v1/admin/access-requests', {
+          params: { query: { limit: 50, ...(cursor ? { cursor } : {}) } },
+          signal,
+        })
+        .then(unwrap<Page<AccessRequest>>),
+    /** 승인 → 화이트리스트(INVITED) 승격 + 큐에서 제거 */
+    approve: (id: string) =>
+      apiClient
+        .POST('/api/v1/admin/access-requests/{id}/approve', { params: { path: { id } } })
+        .then(unwrap<Whitelist>),
+    /** 거절(큐에서 삭제, 화이트리스트엔 넣지 않음) */
+    dismiss: (id: string) =>
+      apiClient
+        .DELETE('/api/v1/admin/access-requests/{id}', { params: { path: { id } } })
+        .then(unwrap<void>),
+  },
 }

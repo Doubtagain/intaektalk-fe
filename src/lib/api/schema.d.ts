@@ -368,6 +368,57 @@ export interface paths {
         patch: operations["AdminController_update"];
         trace?: never;
     };
+    "/api/v1/admin/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 가입 대기 목록 (화이트리스트 미등록 로그인 시도) */
+        get: operations["AccessRequestController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/access-requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 가입 승인 (화이트리스트 INVITED로 승격 + 대기열 제거) */
+        post: operations["AccessRequestController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/access-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 가입 대기 항목 삭제 (거절/무시) */
+        delete: operations["AccessRequestController_dismiss"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -413,15 +464,57 @@ export interface components {
             platform?: "ios" | "android" | "web";
         };
         KakaoLoginDto: {
-            /** @description 카카오 SDK로 발급받은 액세스 토큰 */
-            kakaoAccessToken: string;
+            /** @description 카카오 로그인 리다이렉트 콜백으로 받은 인가 코드(authorization code). 백엔드가 앱 시크릿과 함께 카카오 서버에 제출해 액세스 토큰으로 교환합니다. */
+            code: string;
+            /**
+             * @description 인가 코드를 발급받을 때 사용한 redirect_uri. 카카오 토큰 교환 시 바이트 단위로 동일해야 합니다.
+             * @example https://intaektalk.app/oauth/kakao/callback
+             */
+            redirectUri: string;
             device?: components["schemas"]["DeviceDto"];
+        };
+        LoginUserResponse: {
+            id: string;
+            /** @description 카카오 회원번호 */
+            kakaoId: string;
+        };
+        LoginResponse: {
+            /** @description 액세스 토큰(JWT) */
+            accessToken: string;
+            /** @description 리프레시 토큰(JWT, 회전 대상) */
+            refreshToken: string;
+            user: components["schemas"]["LoginUserResponse"];
+            /** @description 온보딩(프로필 생성) 완료 여부 */
+            isOnboarded: boolean;
         };
         RefreshDto: {
             refreshToken: string;
         };
+        TokenPairResponse: {
+            /** @description 액세스 토큰(JWT) */
+            accessToken: string;
+            /** @description 리프레시 토큰(JWT, 회전 대상) */
+            refreshToken: string;
+        };
         LogoutDto: {
             refreshToken: string;
+        };
+        MeProfileResponse: {
+            nickname: string;
+            statusMessage: string | null;
+            avatarMediaId: string | null;
+            /** @description 표시용 아바타 URL(없으면 null) */
+            avatarUrl: string | null;
+        };
+        MeResponse: {
+            id: string;
+            /** @description 카카오 회원번호 */
+            kakaoId: string;
+            isOnboarded: boolean;
+            /** @description 관리자 콘솔 접근 권한 여부(ADMIN_USER_IDS 기준) */
+            isAdmin: boolean;
+            /** @description 온보딩 전이면 null */
+            profile: components["schemas"]["MeProfileResponse"] | null;
         };
         CreateUploadUrlDto: {
             /** @example image/gif */
@@ -436,6 +529,52 @@ export interface components {
             /** @description 동영상/애니메이션 길이(ms) */
             durationMs?: number;
         };
+        UploadUrlResponse: {
+            mediaId: string;
+            /** @description 업로드용 presigned PUT URL */
+            uploadUrl: string;
+            /** @description 스토리지 객체 키 */
+            storageKey: string;
+        };
+        MediaResponse: {
+            mediaId: string;
+            /** @description 다운로드(GET) URL */
+            url: string;
+            /** @description 썸네일 URL(없으면 null) */
+            thumbnailUrl: string | null;
+            /** @example image/gif */
+            mimeType: string;
+            /** @description 자동재생 대상 여부(움짤/영상) */
+            isAnimated: boolean;
+            width: number | null;
+            height: number | null;
+            /** @description 동영상/애니메이션 길이(ms) */
+            durationMs: number | null;
+        };
+        PublicUserResponse: {
+            id: string;
+            nickname: string;
+            avatarUrl: string | null;
+        };
+        PaginatedUsersResponse: {
+            /**
+             * @description 다음 페이지 커서. null이면 마지막 페이지입니다.
+             * @example null
+             */
+            nextCursor: string | null;
+            items: components["schemas"]["PublicUserResponse"][];
+        };
+        UserProfileResponse: {
+            id: string;
+            nickname: string;
+            statusMessage: string | null;
+            avatarUrl: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 접속 시각
+             */
+            lastSeenAt: string | null;
+        };
         CreateProfileDto: {
             /** @example 택이 */
             nickname: string;
@@ -444,10 +583,68 @@ export interface components {
             /** @description 아바타 미디어 id */
             avatarMediaId?: string;
         };
+        ProfileResponse: {
+            userId: string;
+            nickname: string;
+            statusMessage: string | null;
+            avatarMediaId: string | null;
+            /**
+             * Format: date-time
+             * @description null이면 온보딩 미완료
+             */
+            onboardedAt: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description 표시용 아바타 URL(없으면 null) */
+            avatarUrl: string | null;
+        };
         UpdateProfileDto: {
             nickname?: string;
             statusMessage?: string;
             avatarMediaId?: string;
+        };
+        RoomMemberResponse: {
+            userId: string;
+            nickname: string | null;
+            avatarUrl: string | null;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+        };
+        RoomLastMessageResponse: {
+            /** @description 룸 내 단조 증가 시퀀스 */
+            seq: number;
+            /** @enum {string} */
+            type: "TEXT" | "IMAGE" | "GIF" | "VIDEO" | "FILE" | "SYSTEM";
+            /** @description 미리보기 텍스트(삭제 시 placeholder) */
+            preview: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RoomViewResponse: {
+            id: string;
+            /** @enum {string} */
+            type: "DIRECT" | "GROUP";
+            /** @description GROUP 방 이름 */
+            name: string | null;
+            avatarUrl: string | null;
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastMessageAt: string | null;
+            members: components["schemas"]["RoomMemberResponse"][];
+            /** @description 마지막 메시지(없으면 null) */
+            lastMessage?: components["schemas"]["RoomLastMessageResponse"] | null;
+            /** @description 미읽음 메시지 수 */
+            unreadCount?: number;
+        };
+        PaginatedRoomsResponse: {
+            /**
+             * @description 다음 페이지 커서. null이면 마지막 페이지입니다.
+             * @example null
+             */
+            nextCursor: string | null;
+            items: components["schemas"]["RoomViewResponse"][];
         };
         CreateRoomDto: {
             /** @enum {string} */
@@ -469,6 +666,37 @@ export interface components {
             /** @enum {string} */
             role: "ADMIN" | "MEMBER" | "OWNER";
         };
+        MessageResponse: {
+            id: string;
+            roomId: string;
+            senderId: string;
+            /** @description 룸 내 단조 증가 시퀀스 */
+            seq: number;
+            /** @enum {string} */
+            type: "TEXT" | "IMAGE" | "GIF" | "VIDEO" | "FILE" | "SYSTEM";
+            /** @description TEXT 본문(삭제/미디어면 null) */
+            content: string | null;
+            mediaId: string | null;
+            replyToId: string | null;
+            /** @description 멱등성 키 */
+            clientMessageId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            editedAt: string | null;
+            /** Format: date-time */
+            deletedAt: string | null;
+            /** @description 발신자 제외, 읽은 멤버 수 */
+            readCount?: number;
+        };
+        PaginatedMessagesResponse: {
+            /**
+             * @description 다음 페이지 커서. null이면 마지막 페이지입니다.
+             * @example null
+             */
+            nextCursor: string | null;
+            items: components["schemas"]["MessageResponse"][];
+        };
         SendMessageDto: {
             /** @description 멱등성 키(클라이언트 UUID) */
             clientMessageId?: string;
@@ -481,6 +709,13 @@ export interface components {
             /** @description 답장 대상 메시지 id */
             replyToId?: string | null;
         };
+        SendMessageResponse: {
+            id: string;
+            /** @description 발급된 시퀀스 */
+            seq: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
         ReadDto: {
             /** @example 42 */
             lastReadSeq: number;
@@ -491,6 +726,11 @@ export interface components {
             platform: "ios" | "android" | "web";
             deviceId?: string;
         };
+        PushTokenResponse: {
+            id: string;
+            /** @enum {string} */
+            platform: "ios" | "android" | "web";
+        };
         CreateWhitelistDto: {
             /** @description 카카오 회원번호 */
             kakaoId?: string;
@@ -498,10 +738,74 @@ export interface components {
             identifier?: string;
             note?: string;
         };
+        WhitelistResponse: {
+            id: string;
+            /** @description 카카오 회원번호 */
+            kakaoId: string | null;
+            /** @description 대체 식별자(이메일/전화 등) */
+            identifier: string | null;
+            /** @enum {string} */
+            status: "INVITED" | "ACTIVE" | "BLOCKED";
+            /** @description 초대한 사용자 id */
+            invitedBy: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PaginatedWhitelistResponse: {
+            /**
+             * @description 다음 페이지 커서. null이면 마지막 페이지입니다.
+             * @example null
+             */
+            nextCursor: string | null;
+            items: components["schemas"]["WhitelistResponse"][];
+        };
         UpdateWhitelistDto: {
             /** @enum {string} */
             status?: "INVITED" | "ACTIVE" | "BLOCKED";
             note?: string;
+        };
+        AccessRequestResponse: {
+            id: string;
+            /** @description 로그인 시도에서 확보한 카카오 회원번호 */
+            kakaoId: string;
+            /** @description 카카오 프로필 닉네임 */
+            nickname: string | null;
+            profileImageUrl: string | null;
+            /** @description 누적 로그인 시도 횟수 */
+            attempts: number;
+            /**
+             * Format: date-time
+             * @description 최초 시도 시각
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 마지막 시도 시각
+             */
+            lastAttemptAt: string;
+        };
+        PaginatedAccessRequestsResponse: {
+            /**
+             * @description 다음 페이지 커서. null이면 마지막 페이지입니다.
+             * @example null
+             */
+            nextCursor: string | null;
+            items: components["schemas"]["AccessRequestResponse"][];
+        };
+        HealthResponse: {
+            /** @example ok */
+            status: string;
+        };
+        ReadyResponse: {
+            /** @example ready */
+            status: string;
+            /** @description DB 연결 가능 여부 */
+            db: boolean;
+            /** @description Redis 연결 가능 여부 */
+            redis: boolean;
         };
     };
     responses: never;
@@ -530,7 +834,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["LoginResponse"];
                 };
             };
         };
@@ -553,7 +857,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["TokenPairResponse"];
                 };
             };
         };
@@ -571,6 +875,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description 로그아웃 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -592,7 +897,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
             };
         };
     };
@@ -613,7 +920,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UploadUrlResponse"];
+                };
             };
         };
     };
@@ -632,7 +941,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MediaResponse"];
+                };
             };
         };
     };
@@ -651,7 +962,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MediaResponse"];
+                };
             };
         };
     };
@@ -675,7 +988,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedUsersResponse"];
+                };
             };
         };
     };
@@ -694,7 +1009,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
             };
         };
     };
@@ -716,7 +1033,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["ProfileResponse"];
                 };
             };
         };
@@ -739,7 +1056,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["ProfileResponse"];
                 };
             };
         };
@@ -762,7 +1079,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedRoomsResponse"];
+                };
             };
         };
     };
@@ -784,7 +1103,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RoomViewResponse"];
                 };
             };
         };
@@ -805,7 +1124,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RoomViewResponse"];
                 };
             };
         };
@@ -830,7 +1149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RoomViewResponse"];
                 };
             };
         };
@@ -855,7 +1174,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RoomViewResponse"];
                 };
             };
         };
@@ -872,6 +1191,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description 탈퇴/추방 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -901,7 +1221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["RoomViewResponse"];
                 };
             };
         };
@@ -926,7 +1246,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedMessagesResponse"];
+                };
             };
         };
     };
@@ -949,7 +1271,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SendMessageResponse"];
+                };
             };
         };
     };
@@ -965,6 +1289,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description 언센드 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -988,6 +1313,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description 읽음 위치 갱신 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1013,7 +1339,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PushTokenResponse"];
+                };
             };
         };
     };
@@ -1028,6 +1356,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description 삭제 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1055,7 +1384,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedWhitelistResponse"];
+                };
             };
         };
     };
@@ -1076,7 +1407,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["WhitelistResponse"];
+                };
             };
         };
     };
@@ -1091,6 +1424,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description 삭제 완료(본문 없음) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1118,6 +1452,73 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": components["schemas"]["WhitelistResponse"];
+                };
+            };
+        };
+    };
+    AccessRequestController_list: {
+        parameters: {
+            query?: {
+                /** @description 커서(seq 또는 id 또는 ISO 타임스탬프) */
+                cursor?: string;
+                /** @description 페이지 크기 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAccessRequestsResponse"];
+                };
+            };
+        };
+    };
+    AccessRequestController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhitelistResponse"];
+                };
+            };
+        };
+    };
+    AccessRequestController_dismiss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 완료(본문 없음) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
             };
         };
@@ -1135,7 +1536,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
             };
         };
     };
@@ -1152,7 +1555,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReadyResponse"];
+                };
             };
         };
     };

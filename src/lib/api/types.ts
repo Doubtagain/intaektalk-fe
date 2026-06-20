@@ -24,6 +24,17 @@ export type CreateUploadUrlDto = components['schemas']['CreateUploadUrlDto']
 export type RegisterTokenDto = components['schemas']['RegisterTokenDto']
 export type DevicePlatform = NonNullable<components['schemas']['DeviceDto']['platform']>
 
+// ---------- Admin (화이트리스트 / 가입 대기) ----------
+export type CreateWhitelistDto = components['schemas']['CreateWhitelistDto']
+export type UpdateWhitelistDto = components['schemas']['UpdateWhitelistDto']
+export type Whitelist = components['schemas']['WhitelistResponse']
+export type WhitelistStatus = Whitelist['status']
+export type AccessRequest = components['schemas']['AccessRequestResponse']
+
+// 인증 응답 (백엔드 생성 스키마 — 매핑 전 원형)
+export type MeResponse = components['schemas']['MeResponse']
+export type LoginResponse = components['schemas']['LoginResponse']
+
 export type RoomType = 'DIRECT' | 'GROUP'
 export type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
 
@@ -43,6 +54,10 @@ export interface User {
   avatarUrl: string | null
   statusMessage: string | null
   isOnboarded: boolean
+  /** 관리자 콘솔 접근 권한 (GET /auth/me 의 isAdmin, 백엔드 ADMIN_USER_IDS 기준) */
+  isAdmin?: boolean
+  /** 카카오 회원번호 (me/login 응답) */
+  kakaoId?: string
 }
 
 export interface RoomMember {

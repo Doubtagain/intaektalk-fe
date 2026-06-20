@@ -6,4 +6,8 @@ export const queryKeys = {
   userSearch: (q: string) => ['users', 'search', q] as const,
   media: (mediaId: string) => ['media', mediaId] as const,
   profile: ['profile'] as const,
+  admin: {
+    whitelist: (status?: string) => ['admin', 'whitelist', status ?? 'all'] as const,
+    accessRequests: ['admin', 'accessRequests'] as const,
+  },
 }

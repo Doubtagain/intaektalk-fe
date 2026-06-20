@@ -1,9 +1,16 @@
-import { ChatBubbleAltIcon, SearchIcon, SettingsIcon, type BezierIcon } from '@channel.io/bezier-icons'
+import {
+  ChatBubbleAltIcon,
+  PersonCheckIcon,
+  SearchIcon,
+  SettingsIcon,
+  type BezierIcon,
+} from '@channel.io/bezier-icons'
 import { AlphaIconButton, Box, HStack, VStack } from '@channel.io/bezier-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { RoomListPane } from '@/features/roomList/RoomListPane'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { useAuthStore } from '@/stores/authStore'
 
 /** 레이아웃 치수 (px) */
 const NAV_RAIL_WIDTH = 64
@@ -21,6 +28,7 @@ interface NavEntry {
 function NavRail() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const isAdmin = useAuthStore((s) => s.user?.isAdmin)
 
   const items: NavEntry[] = [
     {
@@ -36,6 +44,16 @@ function NavRail() {
       icon: SettingsIcon,
       active: pathname.startsWith('/settings'),
     },
+    ...(isAdmin
+      ? [
+          {
+            path: '/admin',
+            label: '관리자',
+            icon: PersonCheckIcon,
+            active: pathname.startsWith('/admin'),
+          },
+        ]
+      : []),
   ]
 
   return (

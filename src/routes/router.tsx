@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import { AppLayout } from '@/layouts/AppLayout'
+import { AdminPage } from '@/pages/AdminPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { RoomEmptyPane } from '@/pages/RoomEmptyPane'
@@ -8,7 +9,7 @@ import { RoomPage } from '@/pages/RoomPage'
 import { SearchPage } from '@/pages/SearchPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
-import { OnboardingOnly, PublicOnly, RequireAuth, RequireOnboarded } from './guards'
+import { OnboardingOnly, PublicOnly, RequireAdmin, RequireAuth, RequireOnboarded } from './guards'
 
 export const router = createBrowserRouter([
   {
@@ -42,6 +43,14 @@ export const router = createBrowserRouter([
       { path: 'rooms/:roomId', element: <RoomPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      {
+        path: 'admin',
+        element: (
+          <RequireAdmin>
+            <AdminPage />
+          </RequireAdmin>
+        ),
+      },
     ],
   },
 ])

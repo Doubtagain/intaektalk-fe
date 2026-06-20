@@ -27,6 +27,7 @@ const getRedirectUri = () => `${window.location.origin}/login`
  */
 export function useKakaoLogin() {
   const setAuth = useAuthStore((s) => s.setAuth)
+  const setUser = useAuthStore((s) => s.setUser)
   const { addToast } = useToast()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -56,7 +57,24 @@ export function useKakaoLogin() {
       setLoading(true)
       try {
         const res = await authApi.loginWithKakao(code!, getRedirectUri())
-        setAuth(res, res.user)
+        // 토큰 + 최소 사용자(온보딩 분기에 필요)를 먼저 확정한 뒤, me() 로 닉네임/관리자여부를 보강한다.
+        setAuth(
+          { accessToken: res.accessToken, refreshToken: res.refreshToken },
+          {
+            id: res.user.id,
+            kakaoId: res.user.kakaoId,
+            isOnboarded: res.isOnboarded,
+            isAdmin: false,
+            nickname: '',
+            avatarUrl: null,
+            statusMessage: null,
+          },
+        )
+        try {
+          setUser(await authApi.me())
+        } catch {
+          // me() 보강 실패는 치명적이지 않다 — 다음 세션 부트스트랩에서 동기화된다.
+        }
       } catch (err) {
         if (err instanceof ApiError && err.code === 'NOT_ALLOWED') {
           setErrorKind('not-allowed')
