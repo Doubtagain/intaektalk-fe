@@ -47,7 +47,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const s: AppSocket = io(`${WS_URL}/ws`, {
+    // 백엔드 Socket.IO 는 Engine.IO path 를 /ws 로 마운트한다(@WebSocketGateway({ path: '/ws' }),
+    // 네임스페이스는 기본 '/'). URL 에 /ws 를 붙이면 네임스페이스로 오인되므로 origin 으로 연결하고
+    // path 옵션으로 /ws 를 지정해야 핸드셰이크 경로가 맞는다.
+    const s: AppSocket = io(WS_URL, {
+      path: '/ws',
       // 재연결 시점의 최신 토큰을 쓰도록 콜백 형태 사용
       auth: (cb) => cb({ token: useAuthStore.getState().accessToken }),
       transports: ['websocket'],

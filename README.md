@@ -22,7 +22,7 @@ cp .env.example .env
 | 변수 | 설명 |
 |---|---|
 | `VITE_API_BASE_URL` | REST API 베이스 URL (기본 `http://localhost:3000`) |
-| `VITE_WS_URL` | Socket.IO 서버 origin. 네임스페이스 `/ws`는 코드에서 붙는다 |
+| `VITE_WS_URL` | Socket.IO 서버 origin. Engine.IO path `/ws`는 코드에서 설정한다 |
 | `VITE_KAKAO_JS_KEY` | Kakao Developers 앱의 JavaScript 키 |
 | `VITE_VAPID_PUBLIC_KEY` | 웹 푸시 VAPID 공개키(base64url). 비워두면 푸시 구독을 시도하지 않는다 |
 
@@ -45,7 +45,7 @@ npm run typecheck  # tsc -b
 | 라우팅 | React Router 6 |
 | 서버 상태 | TanStack Query 5 (REST 캐싱, 메시지 무한스크롤) |
 | 클라이언트 상태 | Zustand (세션, 테마, 활성 룸, 소켓 연결 상태) |
-| 실시간 | socket.io-client 4 (백엔드 Socket.IO Gateway, `/ws` 네임스페이스) |
+| 실시간 | socket.io-client 4 (백엔드 Socket.IO Gateway, Engine.IO path `/ws`) |
 | 폼 | react-hook-form |
 | 로그인 | Kakao JavaScript SDK → 백엔드 `/auth/kakao` 토큰 교환 |
 | 미디어 재생 | 네이티브 `<img>`/`<video>` + IntersectionObserver |
@@ -74,7 +74,7 @@ REST/WebSocket 계약은 **인택톡 백엔드 지시서 v2.0** 명세를 단일
 
 - 카카오 로그인: Kakao JS SDK **v2**는 v1의 토큰 팝업 로그인(`Auth.login`)을 제공하지 않으므로 **인가 코드 방식**을 쓴다 — `Auth.authorize({ redirectUri: <origin>/login })`로 카카오 인증 페이지를 다녀온 뒤 `/login?code=`의 인가 코드를 `POST /auth/kakao { code, redirectUri }`로 보내고, 카카오 토큰 교환은 백엔드가 수행한다.
 - REST: `VITE_API_BASE_URL` 기준. 401 응답 시 `/auth/refresh`로 단일 비행(single-flight) 토큰 갱신 후 1회 재시도한다. 에러 바디는 `{ statusCode, code, message }`.
-- WebSocket: `VITE_WS_URL`의 **`/ws` 네임스페이스**로 Socket.IO 연결, `auth: { token: accessToken }`. 수신 이벤트(`message:new`, `message:read`, `message:deleted`, `typing`, `presence`, `room:created`, `room:updated`)는 TanStack Query 캐시에 머지하고, 발행(`message:send`)은 ack의 `seq`로 낙관적 업데이트를 확정한다(`clientMessageId` 멱등 키).
+- WebSocket: `VITE_WS_URL` origin 에 **Engine.IO path `/ws`**(기본 네임스페이스)로 Socket.IO 연결 — `io(VITE_WS_URL, { path: '/ws', auth: { token: accessToken } })`. URL 에 `/ws`를 붙이면 네임스페이스로 오인되어 핸드셰이크가 어긋난다. 수신 이벤트(`message:new`, `message:read`, `message:deleted`, `typing`, `presence`, `room:created`, `room:updated`)는 TanStack Query 캐시에 머지하고, 발행(`message:send`)은 ack의 `seq`로 낙관적 업데이트를 확정한다(`clientMessageId` 멱등 키).
 - 웹 푸시: 구독 객체를 `POST /push/tokens`로 등록하고 `DELETE /push/tokens`로 해제한다. 서비스 워커가 `{ title, body, roomId? }` 페이로드를 알림으로 표시하고, 클릭 시 해당 방으로 이동한다.
 - 로컬 개발 기본 포트: 백엔드 `3000`, 프론트엔드 Vite 개발 서버 `5173`.
 
