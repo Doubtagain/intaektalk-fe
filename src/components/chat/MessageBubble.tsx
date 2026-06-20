@@ -54,11 +54,12 @@ export function MessageBubble({
   const subColor = isMine ? 'bgtxt-absolute-white-light' : 'txt-black-dark'
   const dimmed = sending ? 'var(--opacity-disabled)' : undefined
 
-  const isMedia = isMediaType(message.type) && message.media != null && !deleted
+  const isMedia =
+    isMediaType(message.type) && (message.media != null || message.mediaId != null) && !deleted
 
   const bubble = isMedia ? (
     <div style={{ maxWidth, minWidth: 0, opacity: dimmed }}>
-      <MediaMessage media={message.media!} />
+      <MediaMessage media={message.media ?? undefined} mediaId={message.mediaId ?? undefined} />
     </div>
   ) : (
     <SmoothCornersBox

@@ -1,4 +1,5 @@
 import { apiClient, rawPost, unwrap } from './client'
+import { mapMedia, mapMessage, mapProfileToUser, mapRoom } from './adapters'
 import type {
   AccessRequest,
   AuthTokens,
@@ -7,14 +8,15 @@ import type {
   CreateUploadUrlDto,
   CreateWhitelistDto,
   LoginResponse,
-  MediaMeta,
+  MediaRes,
   MemberRole,
   Message,
-  MessagesPage,
+  MessageRes,
   MeResponse,
   Page,
+  ProfileRes,
   RegisterTokenDto,
-  Room,
+  RoomView,
   SendMessageDto,
   UpdateProfileDto,
   UpdateRoomDto,
@@ -64,9 +66,9 @@ export const authApi = {
 export const profileApi = {
   /** 온보딩 최초 제출 */
   create: (body: CreateProfileDto) =>
-    apiClient.POST('/api/v1/profile', { body }).then(unwrap<User>),
+    apiClient.POST('/api/v1/profile', { body }).then(unwrap<ProfileRes>).then(mapProfileToUser),
   update: (body: UpdateProfileDto) =>
-    apiClient.PATCH('/api/v1/profile', { body }).then(unwrap<User>),
+    apiClient.PATCH('/api/v1/profile', { body }).then(unwrap<ProfileRes>).then(mapProfileToUser),
 }
 
 // ---------- Rooms ----------
@@ -78,17 +80,20 @@ export const roomsApi = {
         params: { query: { limit: 100, ...(cursor ? { cursor } : {}) } },
         signal,
       })
-      .then(unwrap<Page<Room>>),
+      .then(unwrap<Page<RoomView>>)
+      .then((page) => ({ items: page.items.map(mapRoom), nextCursor: page.nextCursor })),
   detail: (roomId: string, signal?: AbortSignal) =>
     apiClient
       .GET('/api/v1/rooms/{roomId}', { params: { path: { roomId } }, signal })
-      .then(unwrap<Room>),
+      .then(unwrap<RoomView>)
+      .then(mapRoom),
   create: (body: CreateRoomDto) =>
-    apiClient.POST('/api/v1/rooms', { body }).then(unwrap<Room>),
+    apiClient.POST('/api/v1/rooms', { body }).then(unwrap<RoomView>).then(mapRoom),
   update: (roomId: string, body: UpdateRoomDto) =>
     apiClient
       .PATCH('/api/v1/rooms/{roomId}', { params: { path: { roomId } }, body })
-      .then(unwrap<Room>),
+      .then(unwrap<RoomView>)
+      .then(mapRoom),
   /** 진입/스크롤 시 읽음 처리 */
   markRead: (roomId: string, lastReadSeq: number) =>
     apiClient
@@ -98,7 +103,8 @@ export const roomsApi = {
   addMembers: (roomId: string, userIds: string[]) =>
     apiClient
       .POST('/api/v1/rooms/{roomId}/members', { params: { path: { roomId } }, body: { userIds } })
-      .then(unwrap<Room>),
+      .then(unwrap<RoomView>)
+      .then(mapRoom),
   changeRole: (roomId: string, userId: string, role: MemberRole) =>
     apiClient
       .PATCH('/api/v1/rooms/{roomId}/members/{userId}', {
@@ -132,7 +138,8 @@ export const messagesApi = {
         },
         signal,
       })
-      .then(unwrap<MessagesPage>),
+      .then(unwrap<Page<MessageRes>>)
+      .then((page) => ({ items: page.items.map(mapMessage), nextCursor: page.nextCursor })),
   /** REST 폴백 전송 (기본 전송은 WebSocket) */
   send: (roomId: string, body: SendMessageDto) =>
     apiClient
@@ -169,14 +176,16 @@ export const mediaApi = {
   meta: (mediaId: string, signal?: AbortSignal) =>
     apiClient
       .GET('/api/v1/media/{mediaId}', { params: { path: { mediaId } }, signal })
-      .then(unwrap<MediaMeta>),
+      .then(unwrap<MediaRes>)
+      .then(mapMedia),
   createUploadUrl: (body: CreateUploadUrlDto) =>
     apiClient.POST('/api/v1/media/upload-url', { body }).then(unwrap<UploadUrlResponse>),
   /** presigned PUT 업로드 후 호출해 객체 존재 확정(READY) */
   complete: (mediaId: string) =>
     apiClient
       .POST('/api/v1/media/{mediaId}/complete', { params: { path: { mediaId } } })
-      .then(unwrap<MediaMeta>),
+      .then(unwrap<MediaRes>)
+      .then(mapMedia),
   /** presigned URL 로 파일 본문 업로드 */
   uploadFile: async (uploadUrl: string, file: File) => {
     const res = await fetch(uploadUrl, {

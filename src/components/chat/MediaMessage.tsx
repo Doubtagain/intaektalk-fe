@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
-import { AlphaIconButton, SmoothCornersBox, Spinner } from '@channel.io/bezier-react'
+import { AlphaIconButton, Center, SmoothCornersBox, Spinner } from '@channel.io/bezier-react'
 import { PlayFilledIcon, RefreshIcon } from '@channel.io/bezier-icons'
 
+import { useMediaMeta } from '@/hooks/queries'
 import type { MediaMeta } from '@/lib/api/types'
 import { useUiStore, type AutoplayPolicy } from '@/stores/uiStore'
 
@@ -30,12 +31,20 @@ const overlayStyle: CSSProperties = {
   justifyContent: 'center',
 }
 
+interface MediaMessageProps {
+  /** 낙관적 로컬 미리보기 등 메타가 이미 있으면 직접 전달 */
+  media?: MediaMeta
+  /** 서버 메시지: mediaId 만 있을 때 — 메타를 조회해 렌더한다 */
+  mediaId?: string | null
+}
+
 /**
  * 미디어 메시지(§6.2) — 움짤은 뷰포트 진입 시 재생, 이탈 시 정지.
  * GIF/WebP/APNG 는 <img> src 스왑, 무음 mp4 는 <video> play/pause.
  * 자동 재생 불허 상태면 썸네일 + 중앙 재생 오버레이.
+ * 백엔드 메시지는 mediaId 만 주므로, media 가 없으면 useMediaMeta 로 조회한다.
  */
-export function MediaMessage({ media }: { media: MediaMeta }) {
+export function MediaMessage({ media: mediaProp, mediaId }: MediaMessageProps) {
   const autoplayPolicy = useUiStore((s) => s.autoplay)
   const [tapped, setTapped] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -43,9 +52,13 @@ export function MediaMessage({ media }: { media: MediaMeta }) {
   const [retryNonce, setRetryNonce] = useState(0)
   const { ref: viewRef, inView } = useInView<HTMLDivElement>()
   const videoRef = useRef<HTMLVideoElement>(null)
+  // 메타가 직접 주어지면 조회하지 않는다(enabled=false).
+  const { data: fetched } = useMediaMeta(mediaProp ? undefined : mediaId ?? undefined)
+  const media = mediaProp ?? fetched ?? null
 
-  const isAnimatedImage = media.isAnimated && ANIMATED_IMAGE_TYPES.includes(media.mimeType)
-  const isAnimatedVideo = media.isAnimated && media.mimeType === 'video/mp4'
+  const isAnimatedImage =
+    !!media && media.isAnimated && ANIMATED_IMAGE_TYPES.includes(media.mimeType)
+  const isAnimatedVideo = !!media && media.isAnimated && media.mimeType === 'video/mp4'
   const canAutoplay = isAutoplayAllowed(autoplayPolicy) || tapped
   const needsTapToPlay = (isAnimatedImage || isAnimatedVideo) && !canAutoplay
 
@@ -63,6 +76,21 @@ export function MediaMessage({ media }: { media: MediaMeta }) {
     setFailedToLoad(false)
     setLoaded(false)
     setRetryNonce((n) => n + 1)
+  }
+
+  // 서버 미디어 메타 조회 중
+  if (!media) {
+    return (
+      <SmoothCornersBox
+        borderRadius={12}
+        backgroundColor="bg-black-lightest"
+        style={{ width: MAX_MEDIA_WIDTH, height: FALLBACK_MEDIA_HEIGHT, maxWidth: '100%' }}
+      >
+        <Center style={{ height: '100%' }}>
+          <Spinner size="s" color="txt-black-dark" />
+        </Center>
+      </SmoothCornersBox>
+    )
   }
 
   // width/height 메타로 aspect-ratio 를 지정해 레이아웃 점프를 방지한다

@@ -15,9 +15,9 @@ import type {
 import { queryKeys } from '@/lib/query/keys'
 import {
   addLocalMessage,
+  confirmLocalMessage,
   markMessageFailed,
   removeLocalMessage,
-  upsertMessage,
 } from '@/lib/socket/cache'
 import { useSocket } from '@/lib/socket/SocketProvider'
 import { useAuthStore } from '@/stores/authStore'
@@ -112,8 +112,12 @@ export function useSendMessage(roomId: string | undefined) {
         clearTimeout(timer)
         if (res.ok) {
           settlePendingMedia(body.clientMessageId)
-          // 같은 clientMessageId 의 낙관적 항목을 서버 확정본으로 교체 (message:new 와 멱등)
-          upsertMessage(queryClient, res.message)
+          // ack 로 낙관적 항목을 확정(서버 id/seq/createdAt). 동일 메시지는 message:new 로도 와서 멱등 교체된다.
+          confirmLocalMessage(queryClient, body.roomId, body.clientMessageId, {
+            id: res.id,
+            seq: res.seq,
+            createdAt: res.createdAt,
+          })
         } else {
           failSend(body.roomId, body.clientMessageId)
         }

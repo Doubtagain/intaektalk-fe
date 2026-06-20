@@ -72,9 +72,12 @@ export function computeRenderFlags(
   return { dateSeparatorLabel, firstOfGroup, showTime, unreadDividerAbove }
 }
 
-/** 메시지별 "안 읽은 N" — 발신자를 제외하고 lastReadSeq < seq 인 멤버 수 */
+/**
+ * 메시지별 "안 읽은 N" — 발신자 제외 멤버 수에서 백엔드 readCount(읽은 수)를 뺀다.
+ * 백엔드가 멤버별 lastReadSeq 를 주지 않으므로 message.readCount 를 단일 출처로 쓴다.
+ * readCount 가 없는(낙관적/WS 직후) 메시지는 0 으로 둔다.
+ */
 export function countUnreadMembers(members: RoomMember[], message: Message): number {
-  return members.filter(
-    (member) => member.userId !== message.senderId && member.lastReadSeq < message.seq,
-  ).length
+  if (message.readCount == null) return 0
+  return Math.max(0, members.length - 1 - message.readCount)
 }

@@ -55,7 +55,9 @@ export function ProfileSection() {
         statusMessage: status,
         ...(values.avatarMediaId ? { avatarMediaId: values.avatarMediaId } : {}),
       })
-      setUser(updated)
+      // ProfileResponse 매핑본은 isAdmin/kakaoId 가 없으므로 기존 user 와 병합해 보존한다.
+      const current = useAuthStore.getState().user
+      setUser(current ? { ...current, ...updated } : updated)
       reset({
         nickname: updated.nickname,
         statusMessage: updated.statusMessage ?? '',

@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
 
+import { mapMessage, mapRoom } from '@/lib/api/adapters'
 import { refreshTokens } from '@/lib/api/client'
 import type { ClientToServerEvents, ServerToClientEvents } from '@/lib/api/types'
 import { queryKeys } from '@/lib/query/keys'
@@ -84,7 +85,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    s.on('message:new', (message) => {
+    s.on('message:new', (raw) => {
+      const message = mapMessage(raw)
       const me = useAuthStore.getState().user
       const activeRoomId = useUiStore.getState().activeRoomId
       upsertMessage(queryClient, message)
@@ -118,12 +120,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    s.on('presence', ({ userId, online }) => {
-      presence.setOnline(userId, online)
+    s.on('presence', ({ userId, status }) => {
+      presence.setOnline(userId, status === 'online')
     })
 
-    s.on('room:created', (room) => upsertRoom(queryClient, room))
-    s.on('room:updated', (room) => upsertRoom(queryClient, room))
+    s.on('room:created', ({ room }) => upsertRoom(queryClient, mapRoom(room)))
+    s.on('room:updated', ({ room }) => upsertRoom(queryClient, mapRoom(room)))
 
     setSocket(s)
 

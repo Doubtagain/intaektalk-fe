@@ -40,6 +40,35 @@ export function addLocalMessage(queryClient: QueryClient, message: LocalMessage)
   upsertMessage(queryClient, message)
 }
 
+/** 전송 ack(ok) 수신 시 낙관적 항목 확정 — 임시 id/seq/createdAt 를 서버 값으로 교체하고 sending 해제 */
+export function confirmLocalMessage(
+  queryClient: QueryClient,
+  roomId: string,
+  clientMessageId: string,
+  patch: { id: string; seq: number; createdAt: string },
+) {
+  queryClient.setQueryData<MessagesData>(queryKeys.messages(roomId), (data) => {
+    if (!data) return data
+    return {
+      ...data,
+      pages: data.pages.map((page) => ({
+        ...page,
+        items: page.items.map((item) =>
+          item.clientMessageId === clientMessageId
+            ? ({
+                ...item,
+                id: patch.id,
+                seq: patch.seq,
+                createdAt: patch.createdAt,
+                localStatus: undefined,
+              } as LocalMessage)
+            : item,
+        ),
+      })),
+    }
+  })
+}
+
 /** 전송 실패 마킹 */
 export function markMessageFailed(queryClient: QueryClient, roomId: string, clientMessageId: string) {
   queryClient.setQueryData<MessagesData>(queryKeys.messages(roomId), (data) => {

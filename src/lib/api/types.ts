@@ -35,6 +35,13 @@ export type AccessRequest = components['schemas']['AccessRequestResponse']
 export type MeResponse = components['schemas']['MeResponse']
 export type LoginResponse = components['schemas']['LoginResponse']
 
+// 백엔드 응답 원형(평면) — adapters.ts 에서 아래 FE 도메인 타입으로 변환한다.
+export type RoomView = components['schemas']['RoomViewResponse']
+export type RoomMemberRes = components['schemas']['RoomMemberResponse']
+export type MessageRes = components['schemas']['MessageResponse']
+export type MediaRes = components['schemas']['MediaResponse']
+export type ProfileRes = components['schemas']['ProfileResponse']
+
 export type RoomType = 'DIRECT' | 'GROUP'
 export type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
 
@@ -112,6 +119,8 @@ export interface Message {
   type: MessageType
   content: string | null
   media: MediaMeta | null
+  /** 백엔드는 미디어를 id 로만 내려주므로 보관 — 렌더 시 이 id 로 메타를 조회한다 */
+  mediaId?: string | null
   replyToId: string | null
   replyTo: MessagePreview | null
   /** 방 내 단조 증가 시퀀스. 정렬·읽음 처리 기준 */
@@ -120,6 +129,9 @@ export interface Message {
   clientMessageId: string | null
   createdAt: string
   deletedAt: string | null
+  /** 발신자 제외, 읽은 멤버 수 (백엔드 readCount) — "안 읽은 N" 계산용 */
+  readCount?: number
+  editedAt?: string | null
 }
 
 /** 낙관적 업데이트 중인 로컬 메시지 상태 */
@@ -172,13 +184,15 @@ export interface ApiErrorBody {
 // ---------- Socket.IO 이벤트 (서버 → 클라이언트) ----------
 
 export interface ServerToClientEvents {
-  'message:new': (message: Message) => void
+  // 백엔드 직렬화 원형(평면) — 핸들러에서 어댑터로 FE 도메인 타입으로 변환한다.
+  'message:new': (message: MessageRes) => void
   'message:read': (payload: { roomId: string; userId: string; lastReadSeq: number }) => void
   'message:deleted': (payload: { roomId: string; messageId: string }) => void
   typing: (payload: { roomId: string; userId: string; isTyping: boolean }) => void
-  presence: (payload: { userId: string; online: boolean }) => void
-  'room:created': (room: Room) => void
-  'room:updated': (room: Room) => void
+  presence: (payload: { userId: string; status: 'online' | 'offline'; lastSeenAt?: string }) => void
+  // 백엔드는 { room } 봉투로 보낸다.
+  'room:created': (payload: { room: RoomView }) => void
+  'room:updated': (payload: { room: RoomView }) => void
   error: (payload: ApiErrorBody) => void
 }
 
@@ -194,7 +208,7 @@ export interface SendMessageBody {
 }
 
 export type SendMessageAck =
-  | { ok: true; message: Message }
+  | { ok: true; id: string; seq: number; createdAt: string }
   | { ok: false; error: ApiErrorBody }
 
 export interface ClientToServerEvents {
