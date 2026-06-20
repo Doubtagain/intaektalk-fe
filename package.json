@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "gen:api": "openapi-typescript src/lib/api/openapi.json -o src/lib/api/schema.d.ts",
-    "gen:api:remote": "openapi-typescript https://api.khmin.cloud/docs-json -o src/lib/api/schema.d.ts"
+    "gen:api:remote": "openapi-typescript https://api.khmin.cloud/docs-json -o src/lib/api/schema.d.ts",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@channel.io/bezier-icons": "^0.59.0",
@@ -25,12 +26,14 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.42.1",
     "@types/node": "^25.9.2",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.2",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "wrangler": "^4.103.0"
   }
 }
