@@ -290,7 +290,7 @@ export function RoomPage() {
               return (
                 <Fragment key={message.id}>
                   {message.type === 'SYSTEM' ? (
-                    <SystemMessage content={message.content ?? ''} />
+                    <SystemMessage content={message.content ?? ''} resolveName={resolveName} />
                   ) : (
                     <MessageBubble
                       message={message}

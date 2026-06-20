@@ -25,6 +25,8 @@ export function getPreviewText(preview: MessagePreview | null): string {
       return '동영상'
     case 'FILE':
       return '파일'
+    case 'SYSTEM':
+      return '시스템 메시지'
     default:
       return preview.content ?? ''
   }
