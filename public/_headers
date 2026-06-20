@@ -1,0 +1,12 @@
+# Cloudflare Pages 응답 헤더
+# 서비스 워커와 매니페스트는 즉시 갱신돼야 하므로 캐시하지 않는다.
+# Vite 해시 자산(/assets/)은 파일명이 내용 해시라 영구 캐시가 안전하다.
+
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

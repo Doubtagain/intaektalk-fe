@@ -1,0 +1,49 @@
+/* 카카오 브랜드 컬러 — Bezier 팔레트에 없는 새 role 로 1회 선언.
+ * 카카오 브랜드 자산이므로 이 선언부만 raw 값을 허용한다 (라이트/다크 동일).
+ * 소비처는 반드시 --color-fill-kakao / --color-text-kakao 변수만 참조한다. */
+:root {
+  --color-fill-kakao: #fee500;
+  --color-text-kakao: var(--black-85);
+}
+
+.kakao-login-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-8);
+  overflow: hidden;
+  background-color: var(--color-fill-kakao);
+  color: var(--color-text-kakao);
+  font-family: inherit;
+  font-size: var(--typography-size-15-font-size);
+  line-height: var(--typography-size-15-line-height);
+  letter-spacing: var(--typography-size-15-letter-spacing);
+  font-weight: var(--font-weight-700);
+  cursor: pointer;
+}
+
+/* 호버 마이크로 모션: 시맨틱 알파 토큰 오버레이만 사용 (raw 색 금지) */
+.kakao-login-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-black-lighter);
+  opacity: 0;
+  transition: opacity var(--transition-duration-s) var(--transition-timing-function-default);
+  pointer-events: none;
+}
+
+.kakao-login-button:hover:not(:disabled)::after {
+  opacity: 1;
+}
+
+.kakao-login-button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: default;
+}

@@ -1,0 +1,58 @@
+/* 전역 리셋 + Bezier 토큰 기반 베이스 스타일.
+ * 색·간격·반경·그림자·모션은 모두 Bezier CSS 변수만 참조한다 (하드코딩 금지). */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Bezier 타이포 토큰은 rem 단위(1rem = 10px 가정)로 발행된다 */
+  font-size: 10px;
+}
+
+body {
+  font-family: var(--font-family-sans-kr);
+  font-size: var(--typography-size-15-font-size);
+  line-height: var(--typography-size-15-line-height);
+  letter-spacing: var(--typography-size-15-letter-spacing);
+  font-weight: var(--font-weight-400);
+  background-color: var(--bg-white-normal);
+  color: var(--txt-black-darkest);
+  -webkit-font-smoothing: antialiased;
+  text-size-adjust: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* 포커스 가시성 (접근성): Bezier 시맨틱 보더 토큰 사용 */
+:focus-visible {
+  outline: 2px solid var(--bgtxt-blue-normal);
+  outline-offset: 1px;
+}
+
+/* 스크롤바: 중립 알파 위계 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-black-light) transparent;
+}
+
+/* 앱 브레이크포인트 (Bezier는 breakpoint 토큰 미발행 — 앱 레이어 책임)
+ * mobile < 768px <= tablet < 1024px <= desktop
+ * JS 측은 src/hooks/useBreakpoint.ts 와 동기화한다. */

@@ -1,0 +1,11 @@
+/* 말풍선 행 호버/포커스 시에만 노출되는 보조 액션 (내 메시지 삭제 등).
+ * 모션은 Bezier 150ms 토큰을 따른다. */
+.chat-message-row .chat-message-action {
+  opacity: 0;
+  transition: opacity var(--transition-duration-s) var(--transition-timing-function-default);
+}
+
+.chat-message-row:hover .chat-message-action,
+.chat-message-row:focus-within .chat-message-action {
+  opacity: 1;
+}
